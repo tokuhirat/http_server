@@ -6,14 +6,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "util.h"
 
 #define BUFFERSIZE 1024
 
 int main(int argc, char *argv[]) {
     int socket_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1) {
-        perror("Could not open socket");
-        exit(EXIT_FAILURE);
+        fatal("Could not open socket");
     }
 
     struct sockaddr_in server_addr;
@@ -22,13 +22,11 @@ int main(int argc, char *argv[]) {
     server_addr.sin_port = htons(8080);
 
 	if (inet_aton("127.0.0.1", &server_addr.sin_addr) == 0) {
-		perror("Invalid IP Address");
-		exit(EXIT_FAILURE);
+		fatal("Invalid IP Address");
 	}
 
     if (connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        perror("Could not connect");
-        exit(EXIT_FAILURE);
+        fatal("Could not connect");
     }
 
     char s[] = "GET /calc?query=2+10 HTTP/1.1";
@@ -37,8 +35,7 @@ int main(int argc, char *argv[]) {
     char buffer[BUFFERSIZE];
     int n = read(socket_fd, buffer, sizeof(buffer));
     if (n == -1) {
-        perror("Could not read");
-        exit(EXIT_FAILURE);
+        fatal("Could not read");
     }
     write(1, buffer, strlen(buffer));
 
