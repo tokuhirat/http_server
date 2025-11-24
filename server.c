@@ -128,7 +128,7 @@ int parse_formula(char* formula, const int formula_len) {
         return atoi(lhs) + parse_formula(rhs, formula_len - operator_position - 1);
     }
     if (formula[operator_position] == '-') {
-        return atoi(lhs) + parse_formula(rhs, formula_len - operator_position - 1);
+        return atoi(lhs) - parse_formula(rhs, formula_len - operator_position - 1);
     }
 
     perror("Invalid formula format");
