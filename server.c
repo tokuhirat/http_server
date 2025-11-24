@@ -50,7 +50,9 @@ int main(int argc, char *argv[]) {
     int result = parse_query(buffer, n);
     char response[256];
     sprintf(response, "aa: %d", result);
-    write(conn_fd, response, strlen(response));
+    if (write(conn_fd, response, strlen(response)) == -1) {
+        fatal("Could not send");
+    }
 
     close(conn_fd);
     close(socket_fd);

@@ -30,14 +30,19 @@ int main(int argc, char *argv[]) {
     }
 
     char s[] = "GET /calc?query=2+10 HTTP/1.1";
-    write(socket_fd, s, sizeof(s));
+    if (write(socket_fd, s, sizeof(s)) == -1) {
+        fatal("GET failed");
+    }
 
     char buffer[BUFFERSIZE];
     int n = read(socket_fd, buffer, sizeof(buffer));
     if (n == -1) {
         fatal("Could not read");
     }
-    write(1, buffer, strlen(buffer));
+
+    if (write(1, buffer, strlen(buffer)) == -1) {
+        fatal("write to stdout failed");
+    }
 
     close(socket_fd);
 }
