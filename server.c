@@ -9,6 +9,10 @@
 #define LISTEN_BACKLOG 50
 #define BUFFERSIZE 1024
 
+int parse_query(char* query, const int query_len);
+int parse_request(char* request, const int query_len);
+int parse_formula(char* formula, const int formula_len);
+
 int main(int argc, char *argv[]) {
     int socket_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1) {
@@ -46,10 +50,94 @@ int main(int argc, char *argv[]) {
         perror("Could not read");
         exit(EXIT_FAILURE);
     }
-    write(1, buffer, n);
+    
+    int result = parse_query(buffer, n);
+    char response[256];
+    sprintf(response, "aa: %d", result);
+    write(conn_fd, response, strlen(response));
 
     close(conn_fd);
     close(socket_fd);
     
     return 0;
+}
+
+int parse_query(char* query, const int query_len) {
+    char method[16], request[256], version[16];
+    char *token;
+    token = strtok(query, " ");
+    if (token == NULL) {
+        perror("HTTP header error");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(method, token);
+
+    token = strtok(NULL, " ");
+    if (token == NULL) {
+        perror("HTTP header error");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(request, token);
+
+    token = strtok(NULL, " ");
+    if (token == NULL) {
+        perror("HTTP header error");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(version, token);
+
+    if (strtok(NULL, " ") != NULL) {
+        perror("HTTP header error");
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(method, "GET") != 0) {
+        perror("only HTTP GET is supported.");
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(version, "HTTP/1.1") != 0) {
+        perror("Only HTTP/1.1 is supported");
+        printf("%s", version);
+        exit(EXIT_FAILURE);
+    }
+    
+    return parse_request(request, strlen(request));
+}
+
+int parse_request(char* request, const int request_len) {
+    const char request_prefix[] = "/calc?query=";
+    if (strncmp(request, request_prefix, strlen(request_prefix)) != 0) {
+        perror("Invalid format");
+        exit(EXIT_FAILURE);
+    }
+    char formula[256];
+    strcpy(formula, request + strlen(request_prefix));
+    return parse_formula(formula, strlen(formula));
+}
+
+int parse_formula(char* formula, const int formula_len) {
+    int operator_position = -1;
+    for (int i = 0; i < formula_len; ++i) {
+        if (formula[i] == '+' || formula[i] == '-') {
+            operator_position = i;
+            break;
+        }
+    }
+    if (operator_position == -1) {
+        return atoi(formula);
+    }
+
+    char lhs[256], rhs[256];
+    strncpy(lhs, formula, operator_position);
+    strcpy(rhs, formula + operator_position + 1);
+
+    if (formula[operator_position] == '+') {
+        return atoi(lhs) + parse_formula(rhs, formula_len - operator_position - 1);
+    }
+    if (formula[operator_position] == '-') {
+        return atoi(lhs) + parse_formula(rhs, formula_len - operator_position - 1);
+    }
+    perror("Invalid formula format");
+    exit(EXIT_FAILURE);
 }
