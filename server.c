@@ -48,8 +48,10 @@ int main(int argc, char *argv[]) {
     }
     
     int result = parse_query(buffer, n);
+    char value[16];
+    sprintf(value, "%d", result);
     char response[256];
-    sprintf(response, "aa: %d", result);
+    sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length:%lu\r\n\r\n%s\r\n", strlen(value), value);
     if (write(conn_fd, response, strlen(response)) == -1) {
         fatal("Could not send");
     }
