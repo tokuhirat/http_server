@@ -15,6 +15,15 @@ int parse_request(char* request, const int query_len);
 int parse_formula(char* formula, const int formula_len);
 
 int main(int argc, char *argv[]) {
+    if (argc > 2) {
+        fatal("argument error");
+    }
+
+    int port = 8080;
+    if (argc == 2) {
+        port = atoi(argv[1]);
+    }
+
     int socket_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1) {
         fatal("Could not open socket");
@@ -23,7 +32,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(8080);
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
