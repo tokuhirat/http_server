@@ -121,27 +121,22 @@ int parse_request(char* request, const int request_len) {
 }
 
 int parse_formula(char* formula, const int formula_len) {
-    int operator_position = -1;
-    for (int i = 0; i < formula_len; ++i) {
-        if (formula[i] == '+' || formula[i] == '-') {
-            operator_position = i;
-            break;
+    char *p = formula;
+    int result = strtol(p, &p, 10);
+    while (*p) {
+        if (*p == '+') {
+            ++p;
+            result += strtol(p, &p, 10);
+            continue;
         }
+        if (*p == '-') {
+            ++p;
+            result -= strtol(p, &p, 10);
+            continue;
+        }
+        perror("Invalid formula format");
     }
-    if (operator_position == -1) {
-        return atoi(formula);
-    }
-
-    char lhs[256], rhs[256];
-    strncpy(lhs, formula, operator_position);
-    strcpy(rhs, formula + operator_position + 1);
-
-    if (formula[operator_position] == '+') {
-        return atoi(lhs) + parse_formula(rhs, formula_len - operator_position - 1);
-    }
-    if (formula[operator_position] == '-') {
-        return atoi(lhs) - parse_formula(rhs, formula_len - operator_position - 1);
-    }
+    return result;
 
     perror("Invalid formula format");
     exit(EXIT_FAILURE);
