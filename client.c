@@ -40,8 +40,12 @@ int main(int argc, char *argv[]) {
         fatal("Could not connect");
     }
 
-    char s[] = "GET /calc?query=2+10 HTTP/1.1";
-    if (write(socket_fd, s, sizeof(s)) == -1) {
+    char formula[256] = {0};
+    scanf("%s", formula);
+    char query[256];
+    sprintf(query, "GET /calc?query=%s HTTP/1.1", formula);
+
+    if (write(socket_fd, query, strlen(query)) == -1) {
         fatal("GET failed");
     }
 
