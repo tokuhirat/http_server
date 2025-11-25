@@ -43,29 +43,32 @@ int main(int argc, char *argv[]) {
         fatal("Could not listen");
     }
 
-    struct sockaddr_in peer_addr;
-    socklen_t peer_addr_len = sizeof(peer_addr);
-    int conn_fd = accept(socket_fd, (struct sockaddr*)&peer_addr, &peer_addr_len);
-    if (conn_fd == -1) {
-        fatal("Could not accept");
+    while (1) {
+        struct sockaddr_in peer_addr;
+        socklen_t peer_addr_len = sizeof(peer_addr);
+        int conn_fd = accept(socket_fd, (struct sockaddr*)&peer_addr, &peer_addr_len);
+        if (conn_fd == -1) {
+            fatal("Could not accept");
+        }
+
+        char buffer[BUFFERSIZE];
+        int n = read(conn_fd, buffer, sizeof(buffer));
+        if (n == -1) {
+            fatal("Could not read");
+        }
+
+        int result = parse_query(buffer, n);
+        char value[16];
+        sprintf(value, "%d", result);
+        char response[256];
+        sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length:%lu\r\n\r\n%s\r\n", strlen(value), value);
+        if (write(conn_fd, response, strlen(response)) == -1) {
+            fatal("Could not send");
+        }
+
+        close(conn_fd);
     }
 
-    char buffer[BUFFERSIZE];
-    int n = read(conn_fd, buffer, sizeof(buffer));
-    if (n == -1) {
-        fatal("Could not read");
-    }
-    
-    int result = parse_query(buffer, n);
-    char value[16];
-    sprintf(value, "%d", result);
-    char response[256];
-    sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length:%lu\r\n\r\n%s\r\n", strlen(value), value);
-    if (write(conn_fd, response, strlen(response)) == -1) {
-        fatal("Could not send");
-    }
-
-    close(conn_fd);
     close(socket_fd);
     
     return 0;
