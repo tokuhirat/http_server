@@ -10,9 +10,10 @@
 #define LISTEN_BACKLOG 50
 #define BUFFERSIZE 1024
 
-int parse_query(char* query, const int query_len);
-int parse_request(char* request, const int query_len);
-int parse_formula(char* formula, const int formula_len);
+int parse_query(char* query, const int query_len, int *result);
+int parse_request(char* request, const int query_len, int *result);
+int parse_formula(char* formula, const int formula_len, int *result);
+int get_num_digits(int value);
 
 int main(int argc, char *argv[]) {
     if (argc > 2) {
@@ -48,22 +49,31 @@ int main(int argc, char *argv[]) {
         socklen_t peer_addr_len = sizeof(peer_addr);
         int conn_fd = accept(socket_fd, (struct sockaddr*)&peer_addr, &peer_addr_len);
         if (conn_fd == -1) {
-            fatal("Could not accept");
+            perror("Could not accept");
+            continue;
         }
 
         char buffer[BUFFERSIZE] = {0};
         int n = read(conn_fd, buffer, sizeof(buffer));
         if (n == -1) {
-            fatal("Could not read");
+            perror("Could not read");
+            close(conn_fd);
+            continue;
         }
 
-        int result = parse_query(buffer, n);
-        char value[16];
-        sprintf(value, "%d", result);
+        int result;
+        if (parse_query(buffer, n, &result) == -1) {
+            perror("Could not read");
+            close(conn_fd);
+            continue;
+        }
+
         char response[256];
-        sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length:%lu\r\n\r\n%s\r\n", strlen(value), value);
+        sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length:%d\r\n\r\n%d\r\n", get_num_digits(result), result);
         if (write(conn_fd, response, strlen(response)) == -1) {
-            fatal("Could not send");
+            perror("Could not send");
+            close(conn_fd);
+            continue;
         }
 
         close(conn_fd);
@@ -74,70 +84,93 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-int parse_query(char* query, const int query_len) {
+int parse_query(char* query, const int query_len, int *result) {
     char method[16], request[256], version[16];
     char *token;
     token = strtok(query, " ");
     if (token == NULL) {
-        fatal("HTTP header error");
+        perror("HTTP header error");
+        return -1;
     }
     strcpy(method, token);
 
     token = strtok(NULL, " ");
     if (token == NULL) {
-        fatal("HTTP header error");
+        perror("HTTP header error");
+        return -1;
     }
     strcpy(request, token);
 
     token = strtok(NULL, " ");
     if (token == NULL) {
-        fatal("HTTP header error");
+        perror("HTTP header error");
+        return -1;
     }
     strcpy(version, token);
 
     if (strtok(NULL, " ") != NULL) {
-        fatal("HTTP header error");
+        perror("HTTP header error");
+        return -1;
     }
 
     if (strcmp(method, "GET") != 0) {
-        fatal("only HTTP GET is supported.");
+        perror("only HTTP GET is supported.");
+        return -1;
     }
 
     if (strcmp(version, "HTTP/1.1") != 0) {
-        fatal("Only HTTP/1.1 is supported");
+        perror("Only HTTP/1.1 is supported");
+        return -1;
     }
     
-    return parse_request(request, strlen(request));
+    return parse_request(request, strlen(request), result);
 }
 
-int parse_request(char* request, const int request_len) {
+int parse_request(char* request, const int request_len, int *result) {
     const char request_prefix[] = "/calc?query=";
     if (strncmp(request, request_prefix, strlen(request_prefix)) != 0) {
-        fatal("Invalid format");
+        perror("Invalid format");
+        return -1;
     }
     char formula[256];
     strcpy(formula, request + strlen(request_prefix));
-    return parse_formula(formula, strlen(formula));
+    return parse_formula(formula, strlen(formula), result);
 }
 
-int parse_formula(char* formula, const int formula_len) {
+int parse_formula(char* formula, const int formula_len, int *result) {
     char *p = formula;
-    int result = strtol(p, &p, 10);
+    int value = strtol(p, &p, 10);
     while (*p) {
         if (*p == '+') {
             ++p;
-            result += strtol(p, &p, 10);
+            if (!*p) {
+                perror("Invalid formula format");
+                return -1;
+            }
+            value += strtol(p, &p, 10);
             continue;
         }
         if (*p == '-') {
             ++p;
-            result -= strtol(p, &p, 10);
+            if (!*p) {
+                perror("Invalid formula format");
+                return -1;
+            }
+            value -= strtol(p, &p, 10);
             continue;
         }
         perror("Invalid formula format");
+        return -1;
     }
-    return result;
+    *result = value;
+    return 0;
+}
 
-    perror("Invalid formula format");
-    exit(EXIT_FAILURE);
+int get_num_digits(int value) {
+    int num_digits = 0;
+    while (value) {
+        ++num_digits;
+        value /= 10;
+    }
+    return num_digits;
 }
