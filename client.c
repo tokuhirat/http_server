@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
         fatal("GET failed");
     }
 
-    char buffer[BUFFERSIZE];
+    char buffer[BUFFERSIZE] = {0};
     int n = read(socket_fd, buffer, sizeof(buffer));
     if (n == -1) {
         fatal("Could not read");

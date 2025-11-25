@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
             fatal("Could not accept");
         }
 
-        char buffer[BUFFERSIZE];
+        char buffer[BUFFERSIZE] = {0};
         int n = read(conn_fd, buffer, sizeof(buffer));
         if (n == -1) {
             fatal("Could not read");
