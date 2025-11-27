@@ -40,17 +40,30 @@ int main(int argc, char *argv[]) {
         fatal("Could not connect");
     }
 
-    char formula[256] = {0};
+    char *formula = calloc(256, sizeof(char));
+    if (formula == NULL) {
+        fatal("calloc failed");
+    }
     scanf("%s", formula);
-    char query[256];
+
+    char *query = calloc(256, sizeof(char));
+    if (query == NULL) {
+        fatal("calloc failed");
+    }
     sprintf(query, "GET /calc?query=%s HTTP/1.1", formula);
+    free(formula);
 
     if (write(socket_fd, query, strlen(query)) == -1) {
         fatal("GET failed");
     }
+    free(query);
 
-    char buffer[BUFFERSIZE] = {0};
-    int n = read(socket_fd, buffer, sizeof(buffer));
+    char *buffer = calloc(BUFFERSIZE, sizeof(char));
+    if (buffer == NULL) {
+        fatal("calloc failed");
+    }
+
+    int n = read(socket_fd, buffer, BUFFERSIZE);
     if (n == -1) {
         fatal("Could not read");
     }
@@ -58,6 +71,7 @@ int main(int argc, char *argv[]) {
     if (write(1, buffer, strlen(buffer)) == -1) {
         fatal("write to stdout failed");
     }
+    free(buffer);
 
     close(socket_fd);
 }

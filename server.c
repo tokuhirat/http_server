@@ -45,37 +45,54 @@ int main(int argc, char *argv[]) {
     }
 
     while (1) {
-        struct sockaddr_in peer_addr;
-        socklen_t peer_addr_len = sizeof(peer_addr);
-        int conn_fd = accept(socket_fd, (struct sockaddr*)&peer_addr, &peer_addr_len);
+        struct sockaddr_in *peer_addr = NULL;
+        char *buffer = NULL;
+        char *response = NULL;
+
+        socklen_t peer_addr_len = sizeof(struct sockaddr_in);
+        peer_addr = calloc(1, peer_addr_len);
+        if (peer_addr == NULL) {
+            perror("calloc error");
+            goto cleanup;
+        }
+        int conn_fd = accept(socket_fd, (struct sockaddr*)peer_addr, &peer_addr_len);
         if (conn_fd == -1) {
             perror("Could not accept");
-            continue;
+            goto cleanup;
         }
 
-        char buffer[BUFFERSIZE] = {0};
-        int n = read(conn_fd, buffer, sizeof(buffer));
+        buffer = calloc(BUFFERSIZE, sizeof(char));
+        if (buffer == NULL) {
+            perror("calloc failed");
+            goto cleanup;
+        }
+        int n = read(conn_fd, buffer, BUFFERSIZE);
         if (n == -1) {
             perror("Could not read");
-            close(conn_fd);
-            continue;
+            goto cleanup;
         }
 
         int result;
         if (parse_query(buffer, n, &result) == -1) {
             perror("Could not read");
-            close(conn_fd);
-            continue;
+            goto cleanup;
         }
 
-        char response[256];
+        response = calloc(BUFFERSIZE, sizeof(char));
+        if (response == NULL) {
+            perror("calloc failed");
+            goto cleanup;
+        }
         sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length:%d\r\n\r\n%d\r\n", get_num_digits(result), result);
         if (write(conn_fd, response, strlen(response)) == -1) {
             perror("Could not send");
-            close(conn_fd);
-            continue;
+            goto cleanup;
         }
 
+cleanup:
+        free(peer_addr);
+        free(buffer);
+        free(response);
         close(conn_fd);
     }
 
