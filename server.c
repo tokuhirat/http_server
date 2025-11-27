@@ -93,7 +93,9 @@ cleanup:
         free(peer_addr);
         free(buffer);
         free(response);
-        close(conn_fd);
+        if (conn_fd) {
+            close(conn_fd);
+        }
     }
 
     close(socket_fd);
